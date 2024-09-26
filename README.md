@@ -1,4 +1,4 @@
-### Blog Application with Laravel
+# Blog Application with Laravel
 
 This Laravel-based blog application, developed as a class project, allows users to create, edit, and delete articles, as well as add and manage comments. The application includes features for user authentication, authorization, and pagination.
 
