@@ -23,6 +23,13 @@ class CommentController extends Controller
     public function add()
     {
         $comment = new Comment;
+
+        $validator = validator(request()->all(), [
+            'content' => 'required',
+        ]);
+
+        if ($validator->fails()) return back();
+
         $comment->content = request()->content;
         $comment->article_id = request()->article_id;
         $comment->user_id = auth()->user()->id;

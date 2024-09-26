@@ -2,6 +2,14 @@
 
 @section('content')
     <div class="container" style="max-width: 600px">
+        @if ($errors->any())
+            <div class="alert alert-warning text-center">
+                @foreach ($errors->all() as $error)
+                    {{ $error }}
+                @endforeach
+            </div>
+        @endif
+
         <form method="post">
             @csrf
 

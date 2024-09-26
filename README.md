@@ -1,66 +1,233 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+### Blog Application with Laravel
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+This Laravel-based blog application, developed as a class project, allows users to create, edit, and delete articles, as well as add and manage comments. The application includes features for user authentication, authorization, and pagination.
 
-## About Laravel
+**Features:**
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+1. **User Authentication:**
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+    - Users can register and log in to the application.
+    - Authentication is required for creating, editing, and deleting articles and comments.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+2. **Article Management:**
 
-## Learning Laravel
+    - Users can create new articles, providing a title, body, and selecting a category.
+    - Users can edit or delete their own articles.
+    - Articles are displayed in a paginated list on the main page.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+3. **Comment Management:**
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+    - Users can add comments to articles.
+    - Users can delete their own comments or comments on their own articles.
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+4. **Authorization:**
+    - Users can only edit or delete their own articles.
+    - Users can only delete their own comments or comments on their own articles.
 
-## Laravel Sponsors
+**Technical Details:**
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+-   **Pagination:** The application uses Bootstrap for pagination, providing a user-friendly navigation through the articles.
+-   **Gates:** Laravel Gates are used to define authorization logic, ensuring that users can only perform actions on resources they own.
+    <br><br>
 
-### Premium Partners
+**AppServiceProvider.php**
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+```php
+<?php
 
-## Contributing
+namespace App\Providers;
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\ServiceProvider;
 
-## Code of Conduct
+class AppServiceProvider extends ServiceProvider
+{
+    public function register(): void
+    {
+        //
+    }
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+    public function boot(): void
+    {
+        Paginator::useBootstrap();
 
-## Security Vulnerabilities
+        Gate::define('comment-delete', function ($user, $comment) {
+            return $user->id === $comment->user_id || $user->id === $comment->article->user_id;
+        });
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+        Gate::define('article-delete', function ($user, $article) {
+            return $user->id === $article->user_id;
+        });
+    }
+}
+```
 
-## License
+<br>
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+**ArticleController.php**
+
+```php
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Article;
+use App\Models\Category;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
+
+class ArticleController extends Controller
+{
+    public function __construct()
+    {
+        return $this->middleware('auth')->except('index', 'detail');
+    }
+
+    public function index()
+    {
+        $articles = Article::latest()->paginate(5);
+
+        return view('articles.index', [
+            'articles' => $articles,
+        ]);
+    }
+
+    public function detail($id)
+    {
+        $article = Article::find($id);
+
+        return view('articles.detail', [
+            'article' => $article
+        ]);
+    }
+
+    public function add()
+    {
+        $categories = Category::all();
+
+        return view('articles.add', [
+            'categories' => $categories
+        ]);
+    }
+
+    public function create()
+    {
+        $article = new Article;
+
+        $validator = validator(request()->all(), [
+            'title' => 'required',
+            'body' => 'required',
+            'category_id' => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator);
+        }
+
+        $article->title = request()->title;
+        $article->body = request()->body;
+        $article->category_id = request()->category_id;
+        $article->user_id = auth()->user()->id;
+        $article->save();
+
+        return redirect("/articles")->with('info', 'Article created');
+    }
+
+    public function delete($id)
+    {
+        $article = Article::find($id);
+
+        if (Gate::allows('article-delete', $article)) {
+            $article->delete();
+            return redirect("/articles")->with('info', 'Article deleted');
+        } else {
+            return back()->with('error', 'Unauthorize to delete this article');
+        }
+    }
+
+    public function edit($id)
+    {
+        $article = Article::find($id);
+        $categories = Category::all();
+
+        if (Gate::allows('article-delete', $article)) {
+            return view('articles.edit', [
+                'article' => $article,
+                'categories' => $categories,
+            ]);
+        } else {
+            return back()->with('error', 'Unauthorize to edit this article');
+        }
+    }
+
+    public function update($id)
+    {
+        $article = Article::find($id);
+
+        $validator = validator(request()->all(), [
+            'title' => 'required',
+            'body' => 'required',
+            'category_id' => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator);
+        }
+
+        $article->title = request()->title;
+        $article->body = request()->body;
+        $article->category_id = request()->category_id;
+        $article->save();
+
+        return redirect("/articles/detail/$article->id")->with('info', 'Article updated');
+    }
+}
+```
+
+<br>
+
+**CommentController.php**
+
+```php
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Comment;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
+
+class CommentController extends Controller
+{
+    public function delete($id)
+    {
+        $comment = Comment::find($id);
+
+        if (Gate::allows('comment-delete', $comment)) {
+            $comment->delete();
+            return back();
+        } else {
+            return back()->with('error', 'Unauthorize to delete this comment');
+        }
+    }
+
+    public function add()
+    {
+        $comment = new Comment;
+
+        $validator = validator(request()->all(), [
+            'content' => 'required',
+        ]);
+
+        if ($validator->fails()) return back();
+
+        $comment->content = request()->content;
+        $comment->article_id = request()->article_id;
+        $comment->user_id = auth()->user()->id;
+        $comment->save();
+
+        return back();
+    }
+}
+```

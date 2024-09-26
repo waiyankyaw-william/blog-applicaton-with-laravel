@@ -16,19 +16,19 @@ class ArticleController extends Controller
 
     public function index()
     {
-        $data = Article::latest()->paginate(5);
+        $articles = Article::latest()->paginate(5);
 
         return view('articles.index', [
-            'articles' => $data,
+            'articles' => $articles,
         ]);
     }
 
     public function detail($id)
     {
-        $data = Article::find($id);
+        $article = Article::find($id);
 
         return view('articles.detail', [
-            'article' => $data
+            'article' => $article
         ]);
     }
 
@@ -94,6 +94,17 @@ class ArticleController extends Controller
     public function update($id)
     {
         $article = Article::find($id);
+
+        $validator = validator(request()->all(), [
+            'title' => 'required',
+            'body' => 'required',
+            'category_id' => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator);
+        }
+
         $article->title = request()->title;
         $article->body = request()->body;
         $article->category_id = request()->category_id;
